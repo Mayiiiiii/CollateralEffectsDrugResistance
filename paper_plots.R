@@ -631,7 +631,7 @@ ggsave('/Users/louagema/Documents/Figures/CollaterEffectsConcept/bidirectional_n
        dpi = 300, height = 6, width = 7.5)
 
 
-###### Unidirectional repeatable cross R cost ########
+ ###### Unidirectional high B repeatable cross R cost ########
 
 
 all_genotypes = expand.grid(rep(list(c(0, 1)), 2))
@@ -673,30 +673,19 @@ unidir_rep$concentration = rep(
 unidir_rep = unidir_rep %>%
   dplyr::mutate(
     xmin_noMIC_single = case_when(
-      scenario == 'Drug A' ~ 10^(1.05),
+      scenario == 'Drug A' ~ 10^(1.07),
       scenario == 'Drug B' ~ 10^(1.85)),
+    orange_max = case_when(
+      scenario == 'Drug A' ~ 10^(1.05),
+      scenario == 'Drug B' ~ 10^(1.65)),
     xmax_MIC_single = case_when(
       scenario == 'Drug A' ~ 10^(1.85),
       scenario == 'Drug B' ~ 10^(2.2)),
     vlines = case_when(
       scenario == 'Drug A' ~ NA_real_,
-      scenario == 'Drug B' ~ 10^(1.45)
+      scenario == 'Drug B' ~ 10^(1.35)
     )
     )
-
-# unidir_rep = unidir_rep %>%
-#   dplyr::mutate(
-#     xmin_noMIC_single = case_when(
-#       scenario == 'Drug A' ~ 10^(1),
-#       scenario == 'Drug B' ~ 10^(2)),
-#     xmax_MIC_single = case_when(
-#       scenario == 'Drug A' ~ 10^(2),
-#       scenario == 'Drug B' ~ 10^(2.2)),
-#     vlines = case_when(
-#       scenario == 'Drug A' ~ NA_real_,
-#       scenario == 'Drug B' ~ 10^(1.45)
-#     )
-#   )
 
 hex <- palette.colors(palette = "Okabe-Ito") #hue_pal()(7)
 
@@ -713,8 +702,8 @@ ggplot(unidir_rep,
         ymin=-Inf, ymax=Inf), 
     inherit.aes = FALSE, alpha=0.4, fill='darkgrey')+
   geom_rect(
-    data = unique(unidir_rep[c("xmin_noMIC_single","vlines","scenario")]),
-    aes(xmin =vlines, xmax = xmin_noMIC_single,
+    data = unique(unidir_rep[c("orange_max","vlines","scenario")]),
+    aes(xmin =vlines, xmax = orange_max,
         ymin=-Inf, ymax=Inf), 
     inherit.aes = FALSE, alpha=0.4, fill='orange') +
   geom_line(data=unidir_rep %>% dplyr::filter(genotype != '0 0'))+
@@ -733,9 +722,234 @@ ggplot(unidir_rep,
   labs(color = fix_spacing, linetype = fix_spacing, size = fix_spacing)
 
 
-ggsave('/Users/louagema/Documents/Figures/CollaterEffectsConcept/unidirectional_repeatable.png',
+# ggsave('/Users/louagema/Documents/Figures/CollaterEffectsConcept/unidirectional_repeatable.png',
+#        dpi = 300, height = 6, width = 7.5)
+
+
+###### Unidirectional low B conc repeatable cross R cost ########
+
+
+
+all_genotypes = expand.grid(rep(list(c(0, 1)), 2))
+k=4
+benefits_vector = cbind(c(50, 0),c(high_ben, 50))
+
+# k=3
+# benefits_vector = cbind(c(low_ben, 0),c(low_ben, high_ben))
+
+cost_vector = c(0.4, 0.2)
+# cost_vector = c(0, 0, 0)
+
+unidir_rep <- data.frame(
+  rate = rep(
+    growth_rate_genotype(phi_max, phi_min, concentrations, MIC, k, cost_vector, c(0,0), c(0,0)), 
+    2),
+  genotype = '0 0', num_muts = '0', 
+  scenario = rep(c('Drug A', 'Drug B'), each = length(concentrations)) 
+)
+for (i in 2:nrow(all_genotypes)){
+  geno = all_genotypes[i,]
+  unidir_rep = rbind(
+    unidir_rep, 
+    data.frame(
+      rate = growth_rate_genotype(phi_max, phi_min, concentrations, MIC, k, cost_vector, benefits_vector[,1], geno),
+      genotype = paste(geno, collapse = ' '), num_muts = sum(geno!=0), 
+      scenario = 'Drug A'
+    ),
+    data.frame(
+      rate = growth_rate_genotype(phi_max, phi_min, concentrations, MIC, k, cost_vector, benefits_vector[,2], geno),
+      genotype = paste(geno, collapse = ' '), num_muts = sum(geno!=0), 
+      scenario = 'Drug B'
+    ))
+}
+
+unidir_rep$concentration = rep(
+  concentrations, nrow(unidir_rep)/length(concentrations))
+
+unidir_rep = unidir_rep %>%
+  dplyr::mutate(
+    xmin_noMIC_single = case_when(
+      scenario == 'Drug A' ~ 10^(1.15),
+      scenario == 'Drug B' ~ 10^(1.05)),
+    orange_max = case_when(
+      scenario == 'Drug A' ~ 10^(1.05),
+      scenario == 'Drug B' ~ 10^(2.2)),
+    xmax_MIC_single = case_when(
+      scenario == 'Drug A' ~ 10^(1.85),
+      scenario == 'Drug B' ~ 10^(1.65)),
+    vlines = case_when(
+      scenario == 'Drug A' ~ NA_real_,
+      scenario == 'Drug B' ~ 10^(1.65)
+    )
+  )
+
+hex <- palette.colors(palette = "Okabe-Ito") #hue_pal()(7)
+
+fix_spacing = 'genotype  '
+# Create plot
+ggplot(unidir_rep, 
+       aes(x=concentration, y=rate, color = genotype, 
+           linetype = genotype, size=genotype)) +
+  facet_grid(scenario~.) +
+  geom_hline(yintercept = 0, color = 'darkgrey', size=1)+
+  geom_rect(
+    data = unique(unidir_rep[c("xmin_noMIC_single","xmax_MIC_single","scenario")]),
+    aes(xmin =xmin_noMIC_single, xmax = xmax_MIC_single,
+        ymin=-Inf, ymax=Inf), 
+    inherit.aes = FALSE, alpha=0.4, fill='darkgrey')+
+  # geom_rect(
+  #   data = unique(unidir_rep[c("orange_max","vlines","scenario")]),
+  #   aes(xmin =vlines, xmax = orange_max,
+  #       ymin=-Inf, ymax=Inf), 
+  #   inherit.aes = FALSE, alpha=0.4, fill='orange') +
+  geom_line(data=unidir_rep %>% dplyr::filter(genotype != '0 0'))+
+  geom_line(data=unidir_rep %>% dplyr::filter(genotype == '0 0')) +
+  theme_bw(base_size = 23)+
+  labs(color = 'genotype')+
+  scale_color_manual(values = c('black',hex[2:10]))+
+  scale_size_manual(values = c(0.5, 1.7, rep(1.5, 7)))+
+  scale_linetype_manual(values=c("solid", rep("solid", 2), rep("dashed", 1), "dotted")) +
+  ylab('Growth rate (arbitrary units)') +
+  xlab('Drug concentration (arbitrary units)')  +
+  scale_x_log10(label=label_power10(magnitude_only = TRUE), limits = c(3.3, 1e3)) +
+  scale_y_continuous(breaks = c(-1,0,1), minor_breaks = c(-0.75, -0.5, -0.25, 0.25, 0.5, 0.75)) +
+  guides(linetype = guide_legend(override.aes = list(size = 4), keywidth = 4, keyheight = 1),
+         colour=guide_legend(keywidth = 4, keyheight = 1)) +
+  labs(color = fix_spacing, linetype = fix_spacing, size = fix_spacing)
+
+
+ggsave('/Users/louagema/Documents/Figures/CollaterEffectsConcept/unidirectional_lowconc_repeatable.png',
        dpi = 300, height = 6, width = 7.5)
 
+
+###### Check epistasis ##########
+
+
+unidir_rep_wide_genotype = unidir_rep %>%
+  dplyr::select(-c(orange_max,vlines, xmax_MIC_single, xmin_noMIC_single)) %>%
+  tidyr::pivot_wider(names_from = genotype, values_from = rate, id_cols = c(concentration, scenario)) %>%
+  dplyr::mutate(epistasis = `0 0` + `1 1` - `0 1` -`1 0`)
+
+ggplot(unidir_rep_wide_genotype, 
+       aes(x=concentration, y=epistasis)) +
+  facet_grid(scenario~.) +
+  theme_bw(base_size = 23) +
+  geom_line() +
+  scale_x_log10() +
+  geom_vline(xintercept = c(50, 250)) 
+
+
+
+###### Unidirectional repeatable cross R different kappa no cost ########
+
+
+all_genotypes = expand.grid(rep(list(c(0, 1)), 2))
+ks = c(4, 4, 4, 1.5)
+benefits_vector = cbind(c(20, 0),c(20, 50))
+
+# k=3
+# benefits_vector = cbind(c(low_ben, 0),c(low_ben, high_ben))
+
+cost_vector = c(0, 0)
+# cost_vector = c(0, 0, 0)
+
+unidir_rep <- data.frame(
+  rate = rep(
+    growth_rate_genotype(phi_max, phi_min, concentrations, MIC, ks[1], cost_vector, c(0,0), c(0,0)), 
+    2),
+  genotype = '0 0', num_muts = '0', 
+  scenario = rep(c('Drug A', 'Drug B'), each = length(concentrations)) 
+)
+for (i in 2:nrow(all_genotypes)){
+  geno = all_genotypes[i,]
+  ki = ks[i]
+  unidir_rep = rbind(
+    unidir_rep, 
+    data.frame(
+      rate = growth_rate_genotype(phi_max, phi_min, concentrations, MIC, ki, cost_vector, benefits_vector[,1], geno),
+      genotype = paste(geno, collapse = ' '), num_muts = sum(geno!=0), 
+      scenario = 'Drug A'
+    ),
+    data.frame(
+      rate = growth_rate_genotype(phi_max, phi_min, concentrations, MIC, ki, cost_vector, benefits_vector[,2], geno),
+      genotype = paste(geno, collapse = ' '), num_muts = sum(geno!=0), 
+      scenario = 'Drug B'
+    ))
+}
+
+unidir_rep$concentration = rep(
+  concentrations, nrow(unidir_rep)/length(concentrations))
+
+unidir_rep = unidir_rep %>%
+  dplyr::mutate(
+    xmin_noMIC_single = case_when(
+      scenario == 'Drug A' ~ 10^(0.8),
+      scenario == 'Drug B' ~ 10^(1.6)),
+    end_orange = case_when(
+      scenario == 'Drug A' ~ NA_real_,
+      scenario == 'Drug B' ~ 10^(1.6)),
+    xmax_MIC_single = case_when(
+      scenario == 'Drug A' ~ 10^(1.6),
+      scenario == 'Drug B' ~ 10^(1.78)),
+    vlines = case_when(
+      scenario == 'Drug A' ~ NA_real_,
+      scenario == 'Drug B' ~ 10^(1.1)
+    )
+  )
+# 
+# unidir_rep = unidir_rep %>%
+#   dplyr::mutate(
+#     xmin_noMIC_single = case_when(
+#       scenario == 'Drug A' ~ 10^(0.8),
+#       scenario == 'Drug B' ~ 10^(1.6)),
+#     end_orange = case_when(
+#       scenario == 'Drug A' ~ NA_real_,
+#       scenario == 'Drug B' ~ 10^(1.4)),
+#     xmax_MIC_single = case_when(
+#       scenario == 'Drug A' ~ 10^(1.6),
+#       scenario == 'Drug B' ~ 10^(1.78)),
+#     vlines = case_when(
+#       scenario == 'Drug A' ~ NA_real_,
+#       scenario == 'Drug B' ~ 10^(1.1)
+#     )
+  # )
+
+hex <- palette.colors(palette = "Okabe-Ito") #hue_pal()(7)
+
+fix_spacing = 'genotype  '
+# Create plot
+ggplot(unidir_rep, 
+       aes(x=concentration, y=rate, color = genotype, 
+           linetype = genotype, size=genotype)) +
+  facet_grid(scenario~.) +
+  geom_hline(yintercept = 0, color = 'darkgrey', size=1)+
+  geom_rect(
+    data = unique(unidir_rep[c("xmin_noMIC_single","xmax_MIC_single","scenario")]),
+    aes(xmin =xmin_noMIC_single, xmax = xmax_MIC_single,
+        ymin=-Inf, ymax=Inf), 
+    inherit.aes = FALSE, alpha=0.4, fill='darkgrey')+
+  geom_rect(
+    data = unique(unidir_rep[c("end_orange","vlines","scenario")]),
+    aes(xmin =vlines, xmax = end_orange,
+        ymin=-Inf, ymax=Inf), 
+    inherit.aes = FALSE, alpha=0.4, fill='orange') +
+  geom_line(data=unidir_rep %>% dplyr::filter(genotype != '0 0'))+
+  geom_line(data=unidir_rep %>% dplyr::filter(genotype == '0 0')) +
+  theme_bw(base_size = 23)+
+  labs(color = 'genotype')+
+  scale_color_manual(values = c('black',hex[2:10]))+
+  scale_size_manual(values = c(0.5, 1.7, rep(1.5, 7)))+
+  scale_linetype_manual(values=c("solid", rep("solid", 2), rep("dashed", 1), "dotted")) +
+  ylab('Growth rate (arbitrary units)') +
+  xlab('Drug concentration (arbitrary units)')  +
+  scale_x_log10(label=label_power10(magnitude_only = TRUE), limits = c(3.3, 1e3)) +
+  scale_y_continuous(breaks = c(-1,0,1), minor_breaks = c(-0.75, -0.5, -0.25, 0.25, 0.5, 0.75)) +
+  guides(linetype = guide_legend(override.aes = list(size = 4), keywidth = 4, keyheight = 1),
+         colour=guide_legend(keywidth = 4, keyheight = 1)) +
+  labs(color = fix_spacing, linetype = fix_spacing, size = fix_spacing)
+
+ggsave('/Users/louagema/Documents/Figures/CollaterEffectsConcept/unidirectional_repeatable_kappa.png',
+       dpi = 300, height = 6, width = 7.5)
 
 
 ###### Unidirectional repeatable cross R cost less extinction ########
